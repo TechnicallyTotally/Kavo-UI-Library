@@ -1,3 +1,7 @@
+-- Expanded Functionality Little To Fix This Trashy Code
+--
+-- You Dont Need To Credit Me (LuizTechTV)
+
 local Kavo = {}
 
 local tween = game:GetService("TweenService")
@@ -7,41 +11,91 @@ local run = game:GetService("RunService")
 
 local Utility = {}
 local Objects = {}
+-- Different Way To Fix My Finest Brain
 function Kavo:DraggingEnabled(frame, parent)
-        
     parent = parent or frame
-    
-    -- stolen from wally or kiriot, kek
-    local dragging = false
-    local dragInput, mousePos, framePos
 
-    frame.InputBegan:Connect(function(input)
+    -- Mobile Detection
+    local UserInputService = game:GetService("UserInputService")
+    local isMobile = UserInputService.TouchEnabled
+
+    -- Stolen from Wally or Kiriot, kek
+    local dragging = false
+    local dragInput, touchStartPos, frameStartPos
+
+    local function onTouchStarted(input, gameProcessedEvent)
+        if not isMobile or gameProcessedEvent then
+            return
+        end
+
+        dragging = true
+        touchStartPos = input.Position
+        frameStartPos = parent.Position
+    end
+
+    local function onTouchMoved(input, gameProcessedEvent)
+        if not isMobile or gameProcessedEvent then
+            return
+        end
+
+        dragInput = input
+    end
+
+    local function onTouchEnded(input, gameProcessedEvent)
+        if not isMobile or gameProcessedEvent then
+            return
+        end
+
+        dragging = false
+    end
+
+    local function onMouseButton1Down(input)
+        if isMobile then
+            return
+        end
+
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = true
-            mousePos = input.Position
-            framePos = parent.Position
-            
+            touchStartPos = input.Position
+            frameStartPos = parent.Position
+
             input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
                     dragging = false
                 end
             end)
         end
-    end)
+    end
 
-    frame.InputChanged:Connect(function(input)
+    local function onMouseMoved(input)
+        if isMobile then
+            return
+        end
+
         if input.UserInputType == Enum.UserInputType.MouseMovement then
             dragInput = input
         end
-    end)
+    end
 
-    input.InputChanged:Connect(function(input)
+    frame.InputBegan:Connect(isMobile and onTouchStarted or onMouseButton1Down)
+    frame.InputChanged:Connect(isMobile and onTouchMoved or onMouseMoved)
+    frame.InputEnded:Connect(onTouchEnded)
+
+    local function onInputChanged(input)
         if input == dragInput and dragging then
-            local delta = input.Position - mousePos
-            parent.Position  = UDim2.new(framePos.X.Scale, framePos.X.Offset + delta.X, framePos.Y.Scale, framePos.Y.Offset + delta.Y)
+            local delta = input.Position - touchStartPos
+            parent.Position = UDim2.new(
+                frameStartPos.X.Scale,
+                frameStartPos.X.Offset + delta.X,
+                frameStartPos.Y.Scale,
+                frameStartPos.Y.Offset + delta.Y
+            )
         end
-    end)
+    end
+
+    UserInputService.InputChanged:Connect(onInputChanged)
 end
+
 
 function Utility:TweenObject(obj, properties, duration, ...)
     tween:Create(obj, tweeninfo(duration, ...), properties):Play()
@@ -122,20 +176,29 @@ local themeStyles = {
 }
 local oldTheme = ""
 
-local SettingsT = {
+local SettingsT = {}
 
-}
+-- So its wants to add toggle saving right?, im did now idiot
+--
+-- Actually Not Working At Level 5 Executor.
 
 local Name = "KavoConfig.JSON"
 
-pcall(function()
-
-if not pcall(function() readfile(Name) end) then
-writefile(Name, game:service'HttpService':JSONEncode(SettingsT))
+local function SaveSettings()
+    writefile(Name, game:GetService("HttpService"):JSONEncode(SettingsT))
 end
 
-Settings = game:service'HttpService':JSONEncode(readfile(Name))
-end)
+local function LoadSettings()
+    if isfile(Name) then
+        local data = readfile(Name)
+        local success, decodedData = pcall(game:GetService("HttpService").JSONDecode, game:GetService("HttpService"), data)
+        if success then
+            for i, v in ipairs(decodedData) do
+                SettingsT[i] = v
+            end
+        end
+    end
+end
 
 local LibName = tostring(math.random(1, 100))..tostring(math.random(1,50))..tostring(math.random(1, 100))
 
@@ -226,7 +289,23 @@ function Kavo.CreateLib(kavName, themeList)
     ScreenGui.Name = LibName
     ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     ScreenGui.ResetOnSpawn = false
-
+    do
+       -- Finest Code Ever
+       local windowRemovedEvent = Instance.new("BindableEvent")
+       windowRemovedEvent.Name = "WindowRemoved"
+       windowRemovedEvent.Parent = ScreenGui
+       
+       local function disconnectWindowRemovedEvent()
+           windowRemovedEvent:Destroy()
+       end
+       
+       ScreenGui.AncestryChanged:Connect(function()
+           if not ScreenGui.Parent then
+              disconnectWindowRemovedEvent()
+           end
+       end)
+    end
+    
     Main.Name = "Main"
     Main.Parent = ScreenGui
     Main.BackgroundColor3 = themeList.Background
@@ -284,13 +363,14 @@ function Kavo.CreateLib(kavName, themeList)
         }):Play()
         wait()
         game.TweenService:Create(Main, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-			Size = UDim2.new(0,0,0,0),
-			Position = UDim2.new(0, Main.AbsolutePosition.X + (Main.AbsoluteSize.X / 2), 0, Main.AbsolutePosition.Y + (Main.AbsoluteSize.Y / 2))
-		}):Play()
+            Size = UDim2.new(0, 0, 0, 0),
+            Position = UDim2.new(0, Main.AbsolutePosition.X + (Main.AbsoluteSize.X / 2), 0, Main.AbsolutePosition.Y + (Main.AbsoluteSize.Y / 2))
+        }):Play()
         wait(1)
         ScreenGui:Destroy()
+        windowRemovedEvent:Fire()
     end)
-
+    
     MainSide.Name = "MainSide"
     MainSide.Parent = Main
     MainSide.BackgroundColor3 = themeList.Header
@@ -456,6 +536,24 @@ function Kavo.CreateLib(kavName, themeList)
             end 
             Utility:TweenObject(tabButton, {BackgroundTransparency = 0}, 0.2)
         end)
+        
+        -- Yes, You Can Change Text Of Tab Now :D
+        
+        function Kavo:Tabs(tabName)
+           local tab = Tabs[tabName.."TabButton"]
+           if tab then
+              return setmetatable({
+                 ChangeText = function(_, text)
+                    tab.Text = text
+                 end,
+              }, {
+              __index = Tabs,
+              __metatable = "The metatable is locked",
+              })
+           end
+        end
+
+        
         local Sections = {}
         local focusing = false
         local viewDe = false
@@ -1137,6 +1235,7 @@ function Kavo.CreateLib(kavName, themeList)
                             end
                             toggled = not toggled
                             pcall(callback, toggled)
+                            SaveSettings() -- Nice Coding
                         else
                             for i,v in next, infoContainer:GetChildren() do
                                 Utility:TweenObject(v, {Position = UDim2.new(0,0,2,0)}, 0.2)
@@ -1216,6 +1315,12 @@ function Kavo.CreateLib(kavName, themeList)
                             pcall(callback, toggled)
                         end
                     end
+                    
+                    -- Save System Is Bad (This Is Fine)
+                    function TogFunction:LoadState()
+                        self:UpdateToggle(nil, SettingsT[#SettingsT])
+                    end
+                    
                     return TogFunction
             end
 
@@ -1359,6 +1464,20 @@ function Kavo.CreateLib(kavName, themeList)
 
                                 updateSectionFrame()
                 UpdateSize()
+                
+                local function UpdateSlider(newValue)
+                    local valPercent = (newValue - minvalue) / (maxvalue - minvalue)
+                    local newSliderSize = UDim2.new(valPercent, 0, 0, 6)
+                    sliderDrag:TweenSize(newSliderSize, Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.15, true)
+                    val.Text = newValue
+                    pcall(function()
+                        callback(newValue)
+                    end)
+                end
+                
+                -- Okay, Tell Me..., Imagine Im Dont Understand Slider Element it took 1 hour to think what the...
+                UpdateSlider(startVal)
+                
                 local mouse = game:GetService("Players").LocalPlayer:GetMouse();
 
                 local ms = game.Players.LocalPlayer:GetMouse()
@@ -2642,4 +2761,3 @@ function Kavo.CreateLib(kavName, themeList)
     end  
     return Tabs
 end
-return Kavo
