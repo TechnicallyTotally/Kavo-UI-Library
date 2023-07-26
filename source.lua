@@ -11,92 +11,42 @@ local run = game:GetService("RunService")
 
 local Utility = {}
 local Objects = {}
--- Different Way To Fix My Finest Brain
+-- 
 function Kavo:DraggingEnabled(frame, parent)
+        
     parent = parent or frame
-
-    -- Mobile Detection
-    local UserInputService = game:GetService("UserInputService")
-    local isMobile = UserInputService.TouchEnabled
-
-    -- Stolen from Wally or Kiriot, kek
+    
+    -- stolen from wally or kiriot, kek
     local dragging = false
-    local dragInput, touchStartPos, frameStartPos
+    local dragInput, mousePos, framePos
 
-    local function onTouchStarted(input, gameProcessedEvent)
-        if not isMobile or gameProcessedEvent then
-            return
-        end
-
-        dragging = true
-        touchStartPos = input.Position
-        frameStartPos = parent.Position
-    end
-
-    local function onTouchMoved(input, gameProcessedEvent)
-        if not isMobile or gameProcessedEvent then
-            return
-        end
-
-        dragInput = input
-    end
-
-    local function onTouchEnded(input, gameProcessedEvent)
-        if not isMobile or gameProcessedEvent then
-            return
-        end
-
-        dragging = false
-    end
-
-    local function onMouseButton1Down(input)
-        if isMobile then
-            return
-        end
-
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+    frame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
-            touchStartPos = input.Position
-            frameStartPos = parent.Position
-
+            mousePos = input.Position
+            framePos = parent.Position
+            
             input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
                     dragging = false
                 end
             end)
         end
-    end
+    end)
 
-    local function onMouseMoved(input)
-        if isMobile then
-            return
-        end
-
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
+    frame.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
             dragInput = input
         end
-    end
+    end)
 
-    frame.InputBegan:Connect(isMobile and onTouchStarted or onMouseButton1Down)
-    frame.InputChanged:Connect(isMobile and onTouchMoved or onMouseMoved)
-    frame.InputEnded:Connect(onTouchEnded)
-
-    local function onInputChanged(input)
+    input.InputChanged:Connect(function(input)
         if input == dragInput and dragging then
-            local delta = input.Position - touchStartPos
-            parent.Position = UDim2.new(
-                frameStartPos.X.Scale,
-                frameStartPos.X.Offset + delta.X,
-                frameStartPos.Y.Scale,
-                frameStartPos.Y.Offset + delta.Y
-            )
+            local delta = input.Position - mousePos
+            parent.Position  = UDim2.new(framePos.X.Scale, framePos.X.Offset + delta.X, framePos.Y.Scale, framePos.Y.Offset + delta.Y)
         end
-    end
-
-    UserInputService.InputChanged:Connect(onInputChanged)
+    end)
 end
-
-
 function Utility:TweenObject(obj, properties, duration, ...)
     tween:Create(obj, tweeninfo(duration, ...), properties):Play()
 end
